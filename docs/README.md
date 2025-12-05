@@ -20,9 +20,6 @@ Benvenuto nella documentazione tecnica completa del progetto.
 ### Setup e Sviluppo
 - [07. Installazione e Configurazione](./07-installazione.md) - Guida setup completa
 
-### Riferimenti
-- [99. Context Summary](./99-context-summary.md) - Riassunto progetto completo
-
 ## Guide Principali
 
 - **Per iniziare**: Leggi [Installazione](./07-installazione.md)
