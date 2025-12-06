@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BookList } from './BookList';
 import { HighlightPreview } from './HighlightPreview';
+
 // Wrapper per SQL.js
 const sqlPromise = new Promise((resolve, reject) => {
   console.log("Inizializzazione di SQL.js...");
@@ -40,9 +41,11 @@ const sqlPromise = new Promise((resolve, reject) => {
     }, 1000);
   }
 });
+
 const App = () => {
   // Rilevamento iniziale della modalità scura dal browser
   const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  
   const [isDark, setIsDark] = useState(prefersDarkMode);
   const [fileName, setFileName] = useState('Trascina qui il tuo file .sqlite');
   const [dbData, setDbData] = useState(null);
@@ -55,6 +58,7 @@ const App = () => {
   const [highlightTitle, setHighlightTitle] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef(null);
+
   // Effetto per gestire il cambio tema
   useEffect(() => {
     console.log("Cambio tema:", isDark ? "scuro" : "chiaro");
@@ -67,6 +71,7 @@ const App = () => {
     // Imposta anche l'attributo data-theme per variabili CSS personalizzate
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
   // Listener per cambiamenti nella preferenza di tema del sistema
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -77,6 +82,7 @@ const App = () => {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
+
   useEffect(() => {
     const loadSQL = async () => {
       try {
@@ -91,6 +97,7 @@ const App = () => {
     };
     loadSQL();
   }, []);
+
   useEffect(() => {
     if (dbData && SQL) {
       console.log("dbData e SQL sono disponibili, caricamento dei libri...");
@@ -102,6 +109,7 @@ const App = () => {
       }
     }
   }, [dbData, SQL]);
+
   const handleFileImport = (e) => {
     try {
       console.log("Inizio importazione file...");
@@ -110,9 +118,11 @@ const App = () => {
         console.log("Nessun file selezionato");
         return;
       }
+
       console.log("File selezionato:", files[0].name);
       setFileName(files[0].name);
       setLoadingError(null); // Reset degli errori precedenti
+
       const fileReader = new FileReader();
       fileReader.onload = async () => {
         console.log("File caricato con successo, creazione database...");
@@ -120,10 +130,12 @@ const App = () => {
           if (!SQL) {
             throw new Error("SQL.js non è stato caricato correttamente");
           }
+
           if (typeof fileReader.result === 'string') {
             console.error("FileReader ha restituito una stringa invece di un ArrayBuffer");
             throw new Error("Formato file non valido");
           }
+
           console.log("Creazione del database SQL...");
           const db = new SQL.Database(new Uint8Array(fileReader.result));
           console.log("Database creato con successo");
@@ -134,10 +146,12 @@ const App = () => {
           setLoadingError("Errore nel processare il file: " + error.message);
         }
       };
+
       fileReader.onerror = (error) => {
         console.error("Errore nella lettura del file:", error);
         setLoadingError("Errore nella lettura del file: " + error);
       };
+
       console.log("Avvio lettura del file come ArrayBuffer...");
       fileReader.readAsArrayBuffer(files[0]);
     } catch (error) {
@@ -145,6 +159,7 @@ const App = () => {
       setLoadingError("Errore generale: " + error.message);
     }
   };
+
   const fetchBookList = () => {
     console.log("Caricamento lista libri...");
     try {
@@ -152,6 +167,7 @@ const App = () => {
       if (!dbData || typeof dbData.prepare !== 'function') {
         throw new Error("Database non valido");
       }
+
       // Query universale che dovrebbe funzionare su tutti i database Kobo
       console.log("Esecuzione query per lista libri...");
       // Prima prova a ottenere libri con evidenziazioni
@@ -167,19 +183,23 @@ const App = () => {
           AND content.Title != ''
         ORDER BY content.Title
       `);
+
       const bookList = [];
       while (stmt.step()) {
         const row = stmt.getAsObject();
         bookList.push(row);
       }
+
       console.log(`Trovati ${bookList.length} libri con evidenziazioni`);
       setBooks(bookList);
+
       if (bookList.length === 0) {
         console.log("Nessun libro con evidenziazioni trovato nel database");
       }
     } catch (error) {
       console.error("Errore nel caricamento dei libri:", error);
       setLoadingError("Errore nel caricamento della lista libri: " + error.message);
+
       // In caso di errore, tenta una query più semplice
       try {
         console.log("Tentativo con query alternativa...");
@@ -195,11 +215,13 @@ const App = () => {
           ORDER BY content.Title
           LIMIT 100
         `);
+
         const bookList = [];
         while (stmt.step()) {
           const row = stmt.getAsObject();
           bookList.push(row);
         }
+
         console.log(`Trovati ${bookList.length} libri (query alternativa)`);
         setBooks(bookList);
         setLoadingError(null);
@@ -209,10 +231,12 @@ const App = () => {
       }
     }
   };
+
   const fetchHighlights = (contentId, bookTitle) => {
     console.log(`Caricamento evidenziazioni per il libro: ${bookTitle} (ID: ${contentId})`);
     setHighlightTitle(bookTitle);
     setSelectedBook({ contentId, bookTitle });
+
     try {
       const stmt = dbData.prepare(`
         SELECT
@@ -222,12 +246,16 @@ const App = () => {
         WHERE bookmark.VolumeID = ?
         ORDER BY bookmark.DateCreated
       `);
+
       stmt.bind([contentId]);
+
       let highlightContent = '';
       let count = 0;
+
       while (stmt.step()) {
         const row = stmt.getAsObject();
         count++;
+
         if (row.HighlightText) {
           // Aggiunta di un separatore per chiarezza
           highlightContent += `Evidenziazione ${count}:\n\n`;
@@ -241,6 +269,7 @@ const App = () => {
           highlightContent += '\n---\n\n';
         }
       }
+
       console.log(`Trovate ${count} evidenziazioni`);
       setHighlights(highlightContent || 'Nessuna evidenziazione trovata per questo libro.');
     } catch (error) {
@@ -248,9 +277,11 @@ const App = () => {
       setHighlights('Errore nel caricamento delle evidenziazioni: ' + error.message);
     }
   };
+
   const exportBookList = (format) => {
     let content = '';
     const filename = `kobo-booklist.${format}`;
+
     if (format === 'json') {
       content = JSON.stringify(books, null, 2);
     } else if (format === 'md') {
@@ -264,6 +295,7 @@ const App = () => {
         content += `"${book.BookTitle.replace(/"/g, '""')}","${book.Author ? book.Author.replace(/"/g, '""') : ''}"\n`;
       });
     }
+
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -272,10 +304,13 @@ const App = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+
   const exportHighlights = () => {
     if (!selectedBook) return;
+
     const filename = `${selectedBook.bookTitle.replace(/[/\\?%*:|"<>]/g, '-')}-highlights.md`;
     const content = `# ${selectedBook.bookTitle}\n\n${highlights}`;
+
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -284,26 +319,32 @@ const App = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+
   const handleDragOver = (e) => {
     e.preventDefault();
   };
+
   const handleDrop = (e) => {
     e.preventDefault();
     handleFileImport(e);
   };
+
   const handleFileClick = () => {
     fileInputRef.current?.click();
   };
+
   // Funzione esplicita per il toggle del tema
   const toggleDarkMode = () => {
     setIsDark(prevMode => !prevMode);
     console.log("Toggle tema cliccato, nuovo stato:", !isDark ? "scuro" : "chiaro");
   };
+
   // Filtra i libri in base al termine di ricerca
   const filteredBooks = books.filter(book =>
     book.BookTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     book.Author?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 flex flex-col">
       {/* Header */}
@@ -404,7 +445,7 @@ const App = () => {
                   />
                 </div>
                 <div className="p-3 bg-gray-100 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{books.length} libri</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{filteredBooks.length} libri</span>
                   <div className="flex space-x-2">
                     <button
                       onClick={() => exportBookList('json')}
@@ -447,4 +488,5 @@ const App = () => {
     </div>
   );
 };
+
 export default App;

@@ -19,6 +19,21 @@ e questo progetto aderisce al [Semantic Versioning](https://semver.org/lang/it/)
 
 ---
 
+## [1.0.1] - 2025-12-06
+
+### Fixed
+
+#### Contatore libri ora riflette i risultati filtrati
+- **Problema**: Il contatore nella sidebar mostrava sempre il numero totale di libri nel database, indipendentemente dai filtri di ricerca attivi. Questo causava confusione quando gli utenti cercavano libri specifici, poiché il numero visualizzato non corrispondeva ai risultati mostrati.
+- **Soluzione**: Modificato il contatore per utilizzare `filteredBooks.length` invece di `books.length`, garantendo che il numero visualizzato corrisponda sempre ai libri effettivamente mostrati nella lista.
+- **File modificati**: 
+  - `src/App.jsx`
+  - `docs/02-componente-app.md` (documentazione aggiornata)
+- **Impatto UX**: Gli utenti ora ricevono un feedback visivo immediato e accurato durante la ricerca, migliorando la comprensione dei risultati e l'usabilità generale dell'applicazione.
+- **Backward Compatibility**: Completa - nessun breaking change, nessuna migrazione richiesta.
+
+---
+
 ## [1.0.0] - 2025-12-03
 
 ### Rilascio Iniziale Stabile
@@ -174,8 +189,9 @@ Il progetto segue [Semantic Versioning](https://semver.org/lang/it/):
 
 ## Link Riferimenti
 
+- [1.0.1]: https://github.com/tuousername/esportatore-note-kobo/releases/tag/v1.0.1
 - [1.0.0]: https://github.com/tuousername/esportatore-note-kobo/releases/tag/v1.0.0
-- [Unreleased]: https://github.com/tuousername/esportatore-note-kobo/compare/v1.0.0...HEAD
+- [Unreleased]: https://github.com/tuousername/esportatore-note-kobo/compare/v1.0.1...HEAD
 
 ---
 
