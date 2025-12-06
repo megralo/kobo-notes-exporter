@@ -280,6 +280,56 @@ Title,Author
 
 **Implementazione**: Inverte lo stato booleano `isDark`.
 
+## Filtraggio e Ricerca
+
+### filteredBooks
+
+**Definizione**:
+```javascript
+const filteredBooks = books.filter(book =>
+  book.BookTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  book.Author?.toLowerCase().includes(searchTerm.toLowerCase())
+);
+```
+
+**Scopo**: Creare un array derivato contenente solo i libri che corrispondono al termine di ricerca.
+
+**Logica**:
+- Ricerca case-insensitive (conversione a lowercase)
+- Ricerca sia nel titolo che nell'autore
+- Safe navigation operator (`?.`) per gestire valori null/undefined
+- Substring matching (non richiede corrispondenza esatta)
+
+**Utilizzo**:
+- Passato al componente `BookList` come prop `books`
+- Utilizzato per il contatore dinamico nella sidebar
+
+### Contatore Dinamico Libri
+
+**Implementazione**:
+```javascript
+<span className="text-sm text-gray-600 dark:text-gray-400">
+  {filteredBooks.length} libri
+</span>
+```
+
+**Scopo**: Mostrare all'utente il numero di libri attualmente visualizzati, aggiornandosi in tempo reale durante la ricerca.
+
+**Comportamento**:
+- **Senza ricerca**: Mostra il numero totale di libri nel database
+- **Durante ricerca**: Mostra il numero di libri che corrispondono ai criteri
+- **Nessun risultato**: Mostra "0 libri"
+
+**Vantaggi UX**:
+- Feedback visivo immediato durante la digitazione
+- Coerenza tra lista visualizzata e contatore
+- Aiuta l'utente a valutare l'efficacia della ricerca
+
+**Note Implementative**:
+- Versione 1.0.0: utilizzava `books.length` (sempre totale)
+- Versione 1.0.1: aggiornato a `filteredBooks.length` (dinamico)
+- Nessun impatto sulle performance (array già calcolato per rendering)
+
 ## Flusso di Inizializzazione
 
 ```
@@ -322,7 +372,11 @@ Title,Author
       <div className="flex">
         <aside>
           // Sidebar libri
-          <BookList />
+          <BookList books={filteredBooks} />
+          // Footer con contatore dinamico
+          <footer>
+            {filteredBooks.length} libri
+          </footer>
         </aside>
         <section>
           // Area evidenziazioni
@@ -337,6 +391,8 @@ Title,Author
   </footer>
 </div>
 ```
+
+**Nota sul Contatore**: Il footer della sidebar utilizza `filteredBooks.length` per garantire che il conteggio rifletta sempre i risultati attualmente visibili, fornendo coerenza e feedback in tempo reale all'utente.
 
 ## Gestione Errori
 
@@ -364,6 +420,7 @@ Tutti gli errori sono mostrati in un box rosso sopra l'area di caricamento:
 2. **Memoizzazione Implicita**: Componenti figli non ri-renderizzano se props non cambiano
 3. **Query Efficienti**: DISTINCT e JOIN per minimizzare dati processati
 4. **FileReader Asincrono**: Non blocca UI durante lettura file
+5. **Filtraggio Client-Side**: Ricerca istantanea senza query database aggiuntive
 
 ## Dipendenze Esterne
 
@@ -398,3 +455,8 @@ const prefersDarkMode = window.matchMedia &&
 ```
 
 **Motivazione**: Rispettare le preferenze sistema dell'utente al primo avvio.
+
+## Versioning
+
+- **v1.0.0**: Rilascio iniziale con tutte le funzionalità core
+- **v1.0.1**: Aggiornato contatore libri per riflettere risultati filtrati in tempo reale
