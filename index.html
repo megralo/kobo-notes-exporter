@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Esportatore di note Kobo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header id="app-header">
+    <div class="header-inner">
+      <h1 class="header-title">Esportatore di note Kobo</h1>
+      <div class="header-actions">
+        <button id="btn-reset" class="btn btn-secondary" style="display:none;">Nuovo database</button>
+        <button id="btn-theme" class="btn btn-secondary">
+          <span id="theme-icon"></span>
+          <span id="theme-label"></span>
+        </button>
+        <button id="btn-shortcuts" class="btn btn-secondary" style="display:none;" title="Scorciatoie da tastiera">?</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main id="main-content">
+
+    <!-- === UPLOAD VIEW === -->
+    <div id="upload-view">
+
+      <!-- Restore banner -->
+      <div id="restore-banner" class="restore-banner" style="display:none;">
+        <p class="restore-text">Database precedente trovato: "<span id="restore-filename"></span>"</p>
+        <div class="restore-actions">
+          <button id="btn-restore" class="btn btn-primary">Ripristina</button>
+          <button id="btn-cancel-restore" class="btn btn-secondary">Carica nuovo file</button>
+        </div>
+      </div>
+
+      <!-- Drop zone -->
+      <div id="drop-zone" class="drop-zone">
+        <div class="drop-icon">&#128218;</div>
+        <p id="file-name" class="drop-title">Trascina qui il tuo file .sqlite</p>
+        <p class="drop-subtitle">oppure clicca per selezionarlo</p>
+      </div>
+      <input type="file" id="file-input" accept=".sqlite" />
+
+      <p class="instructions">
+        Collega il tuo lettore Kobo a un computer. Troverai la directory .kobo (nascosta di default).
+        Al suo interno dovrebbe esserci un file KoboReader.sqlite.
+      </p>
+      <p class="privacy-note">
+        I tuoi dati vengono salvati localmente nel browser e non vengono mai inviati a server esterni.
+      </p>
+
+      <!-- Storage warning -->
+      <div id="storage-warning" class="alert alert-warning" style="display:none;"></div>
+
+      <!-- Loading error -->
+      <div id="loading-error" class="alert alert-error" style="display:none;">
+        <p class="alert-title">Errore:</p>
+        <p id="loading-error-text"></p>
+      </div>
+
+      <!-- SQL loading indicator -->
+      <div id="sql-loading" class="alert alert-info">Caricamento delle librerie in corso...</div>
+    </div>
+
+    <!-- === VIEWER VIEW === -->
+    <div id="viewer-view" style="display:none;">
+      <div class="viewer-layout">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="panel">
+            <!-- Book list header -->
+            <div class="panel-header">
+              <h2 class="panel-title">I tuoi libri</h2>
+              <div class="search-wrapper">
+                <input type="text" id="search-books" class="search-input" placeholder="Cerca..." />
+                <button id="clear-book-search" class="search-clear" style="display:none;">x</button>
+                <span id="book-search-icon" class="search-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Book list -->
+            <div class="panel-body">
+              <ul id="book-list"></ul>
+            </div>
+
+            <!-- Book list footer -->
+            <div class="panel-footer">
+              <span id="book-count" class="book-count"></span>
+              <div class="export-buttons">
+                <button class="btn btn-xs btn-primary" data-export-format="json">JSON</button>
+                <button class="btn btn-xs btn-primary" data-export-format="csv">CSV</button>
+                <button class="btn btn-xs btn-primary" data-export-format="md">MD</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Highlight area -->
+        <div class="highlight-area">
+          <div class="panel">
+            <!-- Highlight header -->
+            <div class="panel-header">
+              <h2 id="highlight-title" class="panel-title truncate">Anteprima note</h2>
+              <div class="highlight-actions">
+                <div class="search-wrapper">
+                  <input type="text" id="search-highlights" class="search-input" placeholder="Cerca nelle note..." />
+                  <button id="clear-highlight-search" class="search-clear" style="display:none;">x</button>
+                  <span id="highlight-search-icon" class="search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </span>
+                </div>
+                <button id="btn-export-highlights" class="btn btn-sm btn-export" style="display:none;">Esporta note</button>
+              </div>
+            </div>
+
+            <!-- Highlight body -->
+            <div class="panel-body" id="highlight-body">
+              <div id="highlight-placeholder" class="placeholder-text">
+                Seleziona un libro per visualizzare le note
+              </div>
+              <pre id="highlight-content" class="highlight-content" style="display:none;"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Shortcuts modal -->
+  <div id="shortcuts-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Scorciatoie da tastiera</h2>
+        <button id="btn-close-modal" class="btn-icon" aria-label="Chiudi">x</button>
+      </div>
+      <div class="modal-body">
+        <p id="platform-info" class="platform-info"></p>
+        <div id="shortcuts-list"></div>
+      </div>
+      <div class="modal-footer">
+        <p>Premi <kbd>Esc</kbd> o <kbd>?</kbd> per chiudere</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer id="app-footer">Made with &#10084;&#65039;</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
