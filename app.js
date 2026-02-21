@@ -6,7 +6,7 @@
  * da tastiera, il tema dark/light e l'esportazione in vari formati.
  *
  * @file app.js
- * @version 1.3.0
+ * @version 1.4.0
  * @license MIT
  */
 
@@ -727,10 +727,13 @@
         : `Nessun risultato trovato per "${state.highlightSearch}"`;
     }
 
-    // Evidenzia visivamente i match nel testo
+    // Evidenzia visivamente i match nel testo.
+    // Il termine di ricerca viene prima escapato come HTML (stessa forma del testo
+    // su cui viene applicata la regex), poi escapato come pattern regex.
     if (state.highlightSearch && display) {
-      const escaped = state.highlightSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escaped})`, 'gi');
+      const escapedHtml = escapeHtml(state.highlightSearch);
+      const escapedRegex = escapedHtml.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedRegex})`, 'gi');
       const safeHtml = escapeHtml(display).replace(regex, '<mark>$1</mark>');
       dom.highlightContent.innerHTML = safeHtml;
     } else {
@@ -1386,3 +1389,17 @@
 //
 //   - Nessuna modifica a index.html o style.css.
 //   - Nessuna variazione di comportamento per il caso nominale (file diversi).
+//
+// v1.4.0 - Task 2.3: Ricerca coerente su testo escapato
+//
+//   - Modificato: in renderHighlights(), nel blocco di highlighting visivo,
+//     la variabile `escaped` e' stata sostituita con due variabili distinte:
+//     `escapedHtml` (termine di ricerca passato per escapeHtml(), portandolo
+//     nella stessa forma del testo su cui viene applicata la regex) ed
+//     `escapedRegex` (escapedHtml con i metacaratteri regex escapati).
+//     Corregge il mancato highlighting quando il termine di ricerca contiene
+//     caratteri speciali HTML come &, <, >, ".
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento per termini di ricerca senza
+//     caratteri speciali HTML (caso nominale).
