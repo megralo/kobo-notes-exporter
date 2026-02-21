@@ -134,6 +134,8 @@
     selectedBook: null,
     /** @type {string} Contenuto grezzo delle evidenziazioni del libro selezionato */
     highlightsRaw: '',
+    /** @type {string|null} Messaggio di errore del caricamento evidenziazioni, null se assente */
+    highlightsError: null,
     /** @type {string} Termine di ricerca nella lista libri */
     searchTerm: '',
     /** @type {string} Termine di ricerca nelle evidenziazioni */
@@ -229,6 +231,7 @@
       btnExportHighlights: $('#btn-export-highlights'),
       highlightBody: $('#highlight-body'),
       highlightPlaceholder: $('#highlight-placeholder'),
+      highlightError: $('#highlight-error'),
       highlightContent: $('#highlight-content'),
       shortcutsModal: $('#shortcuts-modal'),
       btnCloseModal: $('#btn-close-modal'),
@@ -680,13 +683,27 @@
   /**
    * Renderizza l'anteprima delle evidenziazioni nel pannello destro.
    * Gestisce il filtraggio per termine di ricerca e l'evidenziazione visiva dei match.
+   * In caso di errore SQL mostra un messaggio distinto e interrompe il rendering.
    */
   function renderHighlights() {
+    dom.highlightTitle.textContent = state.selectedBook ? state.selectedBook.bookTitle : 'Anteprima note';
+
+    // Caso errore: mostra il messaggio dedicato e interrompe
+    if (state.highlightsError) {
+      dom.highlightPlaceholder.style.display = 'none';
+      dom.highlightContent.style.display = 'none';
+      dom.highlightError.style.display = '';
+      dom.highlightError.textContent = state.highlightsError;
+      dom.btnExportHighlights.style.display = 'none';
+      return;
+    }
+
+    dom.highlightError.style.display = 'none';
+
     const raw = state.highlightsRaw;
     const noContent = !raw || raw === 'Nessuna evidenziazione trovata per questo libro.';
 
     dom.btnExportHighlights.style.display = (raw && !noContent) ? '' : 'none';
-    dom.highlightTitle.textContent = state.selectedBook ? state.selectedBook.bookTitle : 'Anteprima note';
 
     if (!raw) {
       dom.highlightPlaceholder.style.display = '';
@@ -864,7 +881,13 @@
     dom.searchHighlights.value = '';
 
     const result = queryHighlights(state.dbData, contentId);
-    state.highlightsRaw = result.error || result.highlights;
+    if (result.error) {
+      state.highlightsError = result.error;
+      state.highlightsRaw = '';
+    } else {
+      state.highlightsError = null;
+      state.highlightsRaw = result.highlights;
+    }
 
     renderBookList();
     renderHighlights();
@@ -877,6 +900,7 @@
   function clearSelection() {
     state.selectedBook = null;
     state.highlightsRaw = '';
+    state.highlightsError = null;
     state.highlightSearch = '';
     dom.searchHighlights.value = '';
     state.focusedBookIndex = -1;
@@ -1322,3 +1346,25 @@
 //
 //   - Nessuna modifica a index.html o style.css.
 //   - Nessuna variazione di comportamento visibile per l'utente finale.
+//
+// v1.2.0 - Task 2.1: Separare errore e contenuto in selectBook / renderHighlights
+//
+//   - Aggiunto: proprieta' highlightsError: null in INITIAL_STATE; separazione
+//     netta tra stato di errore (string|null) e contenuto delle evidenziazioni
+//     (string).
+//
+//   - Aggiunto: riferimento dom.highlightError in cacheDom().
+//
+//   - Modificato: selectBook() ora assegna result.error a state.highlightsError
+//     e svuota state.highlightsRaw in caso di errore; in caso di successo azzera
+//     state.highlightsError e assegna result.highlights a state.highlightsRaw.
+//
+//   - Modificato: renderHighlights() gestisce state.highlightsError come primo
+//     caso con early return: mostra dom.highlightError, nasconde placeholder e
+//     contenuto, blocca il pulsante di esportazione. Fuori dal ramo errore,
+//     nasconde dom.highlightError prima di procedere con la logica esistente.
+//
+//   - Modificato: clearSelection() aggiunge il reset esplicito di
+//     state.highlightsError = null (non coperto da resetState()).
+//
+//   - Nessuna variazione di comportamento per il caso nominale (nessun errore).

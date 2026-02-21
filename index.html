@@ -130,6 +130,7 @@
               <div id="highlight-placeholder" class="placeholder-text">
                 Seleziona un libro per visualizzare le note
               </div>
+              <div id="highlight-error" class="highlight-error" style="display:none;"></div>
               <pre id="highlight-content" class="highlight-content" style="display:none;"></pre>
             </div>
           </div>
@@ -162,3 +163,15 @@
   <script src="app.js"></script>
 </body>
 </html>
+
+<!-- =============================================================================
+     CHANGELOG
+     =============================================================================
+
+     v1.1.0 - Task 2.1: Separare errore e contenuto in selectBook / renderHighlights
+
+       - Aggiunto: <div id="highlight-error"> nel #highlight-body, subito dopo
+         #highlight-placeholder e prima di #highlight-content. Nascosto per default
+         via style="display:none;". Usato da renderHighlights() per mostrare errori
+         SQL con stile distinto tramite la classe .highlight-error.
+-->
