@@ -6,7 +6,7 @@
  * da tastiera, il tema dark/light e l'esportazione in vari formati.
  *
  * @file app.js
- * @version 1.0.0
+ * @version 1.3.0
  * @license MIT
  */
 
@@ -981,6 +981,8 @@
   /**
    * Gestisce l'importazione di un file .sqlite da input o drag&drop.
    * Legge il file come ArrayBuffer, crea il database e avvia il caricamento.
+   * Azzera il valore dell'input al termine (onloadend) per permettere il
+   * re-import dello stesso file senza dover ricaricare la pagina.
    *
    * @param {Event} event - Evento 'change' dell'input file o evento 'drop'
    */
@@ -1005,6 +1007,9 @@
     };
     reader.onerror = (err) => {
       showError('Errore nella lettura del file: ' + err);
+    };
+    reader.onloadend = () => {
+      dom.fileInput.value = '';
     };
     reader.readAsArrayBuffer(file);
   }
@@ -1368,3 +1373,16 @@
 //     state.highlightsError = null (non coperto da resetState()).
 //
 //   - Nessuna variazione di comportamento per il caso nominale (nessun errore).
+//
+// v1.3.0 - Task 2.2: Reset del file input dopo importazione
+//
+//   - Aggiunto: callback reader.onloadend in handleFileImport() che azzera
+//     dom.fileInput.value al termine della lettura, sia in caso di successo
+//     che di errore. Permette il re-import dello stesso file senza ricaricare
+//     la pagina.
+//
+//   - Modificato: JSDoc di handleFileImport() aggiornato per documentare
+//     il comportamento di reset dell'input.
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento per il caso nominale (file diversi).
