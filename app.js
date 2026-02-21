@@ -116,47 +116,53 @@
   // STATO APPLICAZIONE
   // =========================================================================
 
-  /** @type {Object|null} Istanza SQL.js inizializzata */
-  let SQL = null;
-
-  /** @type {Object|null} Istanza del database SQLite aperto */
-  let dbData = null;
+  /**
+   * Valori iniziali dell'oggetto di stato. Usato come template per il reset.
+   * Modificare qui per aggiungere nuove proprieta' di stato.
+   * @constant {Object}
+   */
+  const INITIAL_STATE = {
+    /** @type {Object|null} Istanza SQL.js inizializzata */
+    SQL: null,
+    /** @type {Object|null} Istanza del database SQLite aperto */
+    dbData: null,
+    /** @type {Array<{ContentID: string, BookTitle: string, Author: string}>} Lista completa dei libri estratti dal database */
+    books: [],
+    /** @type {Array<{ContentID: string, BookTitle: string, Author: string}>} Lista dei libri filtrati in base al termine di ricerca corrente */
+    filteredBooks: [],
+    /** @type {{contentId: string, bookTitle: string}|null} Libro attualmente selezionato */
+    selectedBook: null,
+    /** @type {string} Contenuto grezzo delle evidenziazioni del libro selezionato */
+    highlightsRaw: '',
+    /** @type {string} Termine di ricerca nella lista libri */
+    searchTerm: '',
+    /** @type {string} Termine di ricerca nelle evidenziazioni */
+    highlightSearch: '',
+    /** @type {number} Indice del libro con focus da tastiera (-1 = nessuno) */
+    focusedBookIndex: -1,
+    /** @type {boolean} true se il tema scuro e' attivo */
+    isDark: false,
+    /** @type {boolean} true se la modale scorciatoie e' visibile */
+    showShortcutsHelp: false,
+  };
 
   /**
-   * Lista completa dei libri estratti dal database.
-   * @type {Array<{ContentID: string, BookTitle: string, Author: string}>}
+   * Stato corrente dell'applicazione. Unica fonte di verita' per tutte
+   * le variabili di dominio e di interfaccia. Inizializzato con i valori
+   * di default definiti in {@link INITIAL_STATE}.
+   * @type {typeof INITIAL_STATE}
    */
-  let books = [];
+  let state = { ...INITIAL_STATE };
 
   /**
-   * Lista dei libri filtrati in base al termine di ricerca corrente.
-   * @type {Array<{ContentID: string, BookTitle: string, Author: string}>}
+   * Riporta l'intero stato ai valori iniziali tramite shallow copy di INITIAL_STATE.
+   * Non aggiorna il DOM ne' esegue side effect: il chiamante e' responsabile
+   * del re-render e di ripristinare le proprieta' che non devono essere azzerate
+   * (es. state.isDark, state.SQL) prima di procedere.
    */
-  let filteredBooks = [];
-
-  /**
-   * Libro attualmente selezionato.
-   * @type {{contentId: string, bookTitle: string}|null}
-   */
-  let selectedBook = null;
-
-  /** @type {string} Contenuto grezzo delle evidenziazioni del libro selezionato */
-  let highlightsRaw = '';
-
-  /** @type {string} Termine di ricerca nella lista libri */
-  let searchTerm = '';
-
-  /** @type {string} Termine di ricerca nelle evidenziazioni */
-  let highlightSearch = '';
-
-  /** @type {number} Indice del libro con focus da tastiera (-1 = nessuno) */
-  let focusedBookIndex = -1;
-
-  /** @type {boolean} true se il tema scuro e' attivo */
-  let isDark = false;
-
-  /** @type {boolean} true se la modale scorciatoie e' visibile */
-  let showShortcutsHelp = false;
+  function resetState() {
+    state = { ...INITIAL_STATE };
+  }
 
   // =========================================================================
   // RIFERIMENTI DOM
@@ -253,21 +259,21 @@
    * e il contenuto del pulsante toggle.
    */
   function applyTheme() {
-    if (isDark) {
+    if (state.isDark) {
       dom.html.classList.add('dark');
     } else {
       dom.html.classList.remove('dark');
     }
-    dom.html.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    dom.themeIcon.textContent = isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
-    dom.themeLabel.textContent = isDark ? 'Modalit\u00e0 Chiara' : 'Modalit\u00e0 Scura';
+    dom.html.setAttribute('data-theme', state.isDark ? 'dark' : 'light');
+    dom.themeIcon.textContent = state.isDark ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    dom.themeLabel.textContent = state.isDark ? 'Modalit\u00e0 Chiara' : 'Modalit\u00e0 Scura';
   }
 
   /**
    * Alterna tra tema chiaro e scuro.
    */
   function toggleTheme() {
-    isDark = !isDark;
+    state.isDark = !state.isDark;
     applyTheme();
   }
 
@@ -548,13 +554,13 @@
 
     switch (format) {
       case 'json':
-        content = JSON.stringify(books, null, 2);
+        content = JSON.stringify(state.books, null, 2);
         mime = 'application/json';
         ext = 'json';
         break;
       case 'csv': {
         let csv = 'Title,Author\n';
-        books.forEach((b) => {
+        state.books.forEach((b) => {
           const t = (b.BookTitle || '').replace(/"/g, '""');
           const a = (b.Author || '').replace(/"/g, '""');
           csv += `"${t}","${a}"\n`;
@@ -566,7 +572,7 @@
       }
       case 'md': {
         let md = '# Kobo Book List\n\n';
-        books.forEach((b) => {
+        state.books.forEach((b) => {
           const author = b.Author ? ` by ${b.Author}` : '';
           md += `- ${b.BookTitle}${author}\n`;
         });
@@ -586,9 +592,9 @@
    * Non fa nulla se nessun libro e' selezionato o se non ci sono evidenziazioni.
    */
   function exportHighlights() {
-    if (!selectedBook || !highlightsRaw) return;
-    const filename = `${sanitizeFilename(selectedBook.bookTitle)}-highlights.md`;
-    const content = `# ${selectedBook.bookTitle}\n\n${highlightsRaw}`;
+    if (!state.selectedBook || !state.highlightsRaw) return;
+    const filename = `${sanitizeFilename(state.selectedBook.bookTitle)}-highlights.md`;
+    const content = `# ${state.selectedBook.bookTitle}\n\n${state.highlightsRaw}`;
     downloadFile(content, filename, 'text/markdown');
   }
 
@@ -613,8 +619,8 @@
    * Aggiorna anche il contatore, lo stato di selezione/focus e i controlli di ricerca.
    */
   function renderBookList() {
-    const lower = searchTerm.toLowerCase();
-    filteredBooks = books.filter(
+    const lower = state.searchTerm.toLowerCase();
+    state.filteredBooks = state.books.filter(
       (b) =>
         (b.BookTitle || '').toLowerCase().includes(lower) ||
         (b.Author || '').toLowerCase().includes(lower)
@@ -622,23 +628,23 @@
 
     dom.bookList.innerHTML = '';
 
-    if (filteredBooks.length === 0) {
+    if (state.filteredBooks.length === 0) {
       const li = document.createElement('li');
       li.className = 'empty-list';
-      li.textContent = books.length === 0
+      li.textContent = state.books.length === 0
         ? 'Nessun libro trovato. Assicurati che il file KoboReader.sqlite sia valido.'
         : 'Nessun risultato per la ricerca.';
       dom.bookList.appendChild(li);
     } else {
-      filteredBooks.forEach((book, i) => {
+      state.filteredBooks.forEach((book, i) => {
         const li = document.createElement('li');
         li.className = 'book-item';
         li.dataset.bookIndex = i;
 
-        if (selectedBook && selectedBook.contentId === book.ContentID) {
+        if (state.selectedBook && state.selectedBook.contentId === book.ContentID) {
           li.classList.add('selected');
         }
-        if (focusedBookIndex === i && !(selectedBook && selectedBook.contentId === book.ContentID)) {
+        if (state.focusedBookIndex === i && !(state.selectedBook && state.selectedBook.contentId === book.ContentID)) {
           li.classList.add('focused');
         }
 
@@ -659,10 +665,10 @@
       });
     }
 
-    dom.bookCount.textContent = filteredBooks.length + ' libri';
+    dom.bookCount.textContent = state.filteredBooks.length + ' libri';
 
     // Visibilita' del pulsante di reset ricerca
-    if (searchTerm) {
+    if (state.searchTerm) {
       dom.clearBookSearch.style.display = '';
       dom.bookSearchIcon.style.display = 'none';
     } else {
@@ -676,11 +682,11 @@
    * Gestisce il filtraggio per termine di ricerca e l'evidenziazione visiva dei match.
    */
   function renderHighlights() {
-    const raw = highlightsRaw;
+    const raw = state.highlightsRaw;
     const noContent = !raw || raw === 'Nessuna evidenziazione trovata per questo libro.';
 
     dom.btnExportHighlights.style.display = (raw && !noContent) ? '' : 'none';
-    dom.highlightTitle.textContent = selectedBook ? selectedBook.bookTitle : 'Anteprima note';
+    dom.highlightTitle.textContent = state.selectedBook ? state.selectedBook.bookTitle : 'Anteprima note';
 
     if (!raw) {
       dom.highlightPlaceholder.style.display = '';
@@ -694,19 +700,19 @@
     let display = raw;
 
     // Filtra le sezioni che contengono il termine di ricerca
-    if (highlightSearch && !noContent) {
+    if (state.highlightSearch && !noContent) {
       const sections = raw.split('---\n\n');
       const matching = sections.filter((s) =>
-        s.toLowerCase().includes(highlightSearch.toLowerCase())
+        s.toLowerCase().includes(state.highlightSearch.toLowerCase())
       );
       display = matching.length > 0
         ? matching.join('---\n\n')
-        : `Nessun risultato trovato per "${highlightSearch}"`;
+        : `Nessun risultato trovato per "${state.highlightSearch}"`;
     }
 
     // Evidenzia visivamente i match nel testo
-    if (highlightSearch && display) {
-      const escaped = highlightSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (state.highlightSearch && display) {
+      const escaped = state.highlightSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`(${escaped})`, 'gi');
       const safeHtml = escapeHtml(display).replace(regex, '<mark>$1</mark>');
       dom.highlightContent.innerHTML = safeHtml;
@@ -715,7 +721,7 @@
     }
 
     // Visibilita' del pulsante di reset ricerca evidenziazioni
-    if (highlightSearch) {
+    if (state.highlightSearch) {
       dom.clearHighlightSearch.style.display = '';
       dom.highlightSearchIcon.style.display = 'none';
     } else {
@@ -838,8 +844,8 @@
    * Alterna la visibilita' della modale delle scorciatoie da tastiera.
    */
   function toggleShortcutsModal() {
-    showShortcutsHelp = !showShortcutsHelp;
-    dom.shortcutsModal.style.display = showShortcutsHelp ? '' : 'none';
+    state.showShortcutsHelp = !state.showShortcutsHelp;
+    dom.shortcutsModal.style.display = state.showShortcutsHelp ? '' : 'none';
   }
 
   // =========================================================================
@@ -853,12 +859,12 @@
    * @param {string} bookTitle - Titolo del libro
    */
   function selectBook(contentId, bookTitle) {
-    selectedBook = { contentId, bookTitle };
-    highlightSearch = '';
+    state.selectedBook = { contentId, bookTitle };
+    state.highlightSearch = '';
     dom.searchHighlights.value = '';
 
-    const result = queryHighlights(dbData, contentId);
-    highlightsRaw = result.error || result.highlights;
+    const result = queryHighlights(state.dbData, contentId);
+    state.highlightsRaw = result.error || result.highlights;
 
     renderBookList();
     renderHighlights();
@@ -869,12 +875,12 @@
    * Chiude anche la modale scorciatoie se aperta.
    */
   function clearSelection() {
-    selectedBook = null;
-    highlightsRaw = '';
-    highlightSearch = '';
+    state.selectedBook = null;
+    state.highlightsRaw = '';
+    state.highlightSearch = '';
     dom.searchHighlights.value = '';
-    focusedBookIndex = -1;
-    showShortcutsHelp = false;
+    state.focusedBookIndex = -1;
+    state.showShortcutsHelp = false;
     dom.shortcutsModal.style.display = 'none';
     renderBookList();
     renderHighlights();
@@ -888,14 +894,11 @@
    */
   async function resetApp() {
     await clearIDB();
-    dbData = null;
-    books = [];
-    filteredBooks = [];
-    selectedBook = null;
-    highlightsRaw = '';
-    highlightSearch = '';
-    searchTerm = '';
-    focusedBookIndex = -1;
+    const currentTheme = state.isDark;
+    const currentSQL = state.SQL;
+    resetState();
+    state.isDark = currentTheme;
+    state.SQL = currentSQL;
 
     dom.searchBooks.value = '';
     dom.searchHighlights.value = '';
@@ -904,7 +907,7 @@
     hideError();
     hideStorageWarning();
     dom.restoreBanner.style.display = 'none';
-    dom.sqlLoading.style.display = SQL ? 'none' : '';
+    dom.sqlLoading.style.display = state.SQL ? 'none' : '';
 
     showView(false);
   }
@@ -918,17 +921,17 @@
    * @param {string|null} fileName - Nome del file per la persistenza (opzionale)
    */
   function loadDatabaseIntoApp(db, arrayBuffer, fileName) {
-    dbData = db;
+    state.dbData = db;
     const result = queryBookList(db);
     if (result.error) {
       showError(result.error);
       return;
     }
-    books = result.books;
-    selectedBook = null;
-    highlightsRaw = '';
-    searchTerm = '';
-    focusedBookIndex = -1;
+    state.books = result.books;
+    state.selectedBook = null;
+    state.highlightsRaw = '';
+    state.searchTerm = '';
+    state.focusedBookIndex = -1;
     dom.searchBooks.value = '';
 
     showView(true);
@@ -968,9 +971,9 @@
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        if (!SQL) throw new Error("SQL.js non e' stato caricato correttamente");
+        if (!state.SQL) throw new Error("SQL.js non e' stato caricato correttamente");
         const arrayBuffer = reader.result;
-        const db = createDatabase(SQL, arrayBuffer);
+        const db = createDatabase(state.SQL, arrayBuffer);
         loadDatabaseIntoApp(db, arrayBuffer, file.name);
       } catch (err) {
         showError('Errore nel processare il file: ' + err.message);
@@ -992,21 +995,21 @@
    * @param {'up'|'down'|'first'|'last'} direction - Direzione di navigazione
    */
   function navigateBooks(direction) {
-    if (filteredBooks.length === 0) return;
+    if (state.filteredBooks.length === 0) return;
     switch (direction) {
       case 'down':
-        focusedBookIndex = focusedBookIndex < filteredBooks.length - 1
-          ? focusedBookIndex + 1
-          : focusedBookIndex;
+        state.focusedBookIndex = state.focusedBookIndex < state.filteredBooks.length - 1
+          ? state.focusedBookIndex + 1
+          : state.focusedBookIndex;
         break;
       case 'up':
-        focusedBookIndex = focusedBookIndex > 0 ? focusedBookIndex - 1 : 0;
+        state.focusedBookIndex = state.focusedBookIndex > 0 ? state.focusedBookIndex - 1 : 0;
         break;
       case 'first':
-        focusedBookIndex = 0;
+        state.focusedBookIndex = 0;
         break;
       case 'last':
-        focusedBookIndex = filteredBooks.length - 1;
+        state.focusedBookIndex = state.filteredBooks.length - 1;
         break;
     }
     renderBookList();
@@ -1018,8 +1021,8 @@
    * Non fa nulla se nessun libro ha il focus.
    */
   function selectFocusedBook() {
-    if (focusedBookIndex >= 0 && focusedBookIndex < filteredBooks.length) {
-      const book = filteredBooks[focusedBookIndex];
+    if (state.focusedBookIndex >= 0 && state.focusedBookIndex < state.filteredBooks.length) {
+      const book = state.filteredBooks[state.focusedBookIndex];
       selectBook(book.ContentID, book.BookTitle);
     }
   }
@@ -1028,7 +1031,7 @@
    * Scrolla la lista libri per rendere visibile l'elemento con focus.
    */
   function scrollToFocused() {
-    const el = dom.bookList.querySelector(`[data-book-index="${focusedBookIndex}"]`);
+    const el = dom.bookList.querySelector(`[data-book-index="${state.focusedBookIndex}"]`);
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
@@ -1125,7 +1128,7 @@
     ];
 
     window.addEventListener('keydown', (e) => {
-      if (!dbData) return;
+      if (!state.dbData) return;
 
       const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
 
@@ -1166,12 +1169,12 @@
     // Modale scorciatoie
     dom.btnShortcuts.addEventListener('click', toggleShortcutsModal);
     dom.btnCloseModal.addEventListener('click', () => {
-      showShortcutsHelp = false;
+      state.showShortcutsHelp = false;
       dom.shortcutsModal.style.display = 'none';
     });
     dom.shortcutsModal.addEventListener('click', (e) => {
       if (e.target === dom.shortcutsModal) {
-        showShortcutsHelp = false;
+        state.showShortcutsHelp = false;
         dom.shortcutsModal.style.display = 'none';
       }
     });
@@ -1195,9 +1198,9 @@
     // Ripristino database da IndexedDB
     dom.btnRestore.addEventListener('click', async () => {
       const stored = await loadFromIDB();
-      if (stored && SQL) {
+      if (stored && state.SQL) {
         try {
-          const db = createDatabase(SQL, stored.arrayBuffer);
+          const db = createDatabase(state.SQL, stored.arrayBuffer);
           dom.restoreBanner.style.display = 'none';
           loadDatabaseIntoApp(db, null, null);
         } catch (_) {
@@ -1214,24 +1217,24 @@
 
     // Ricerca nella lista libri
     dom.searchBooks.addEventListener('input', () => {
-      searchTerm = dom.searchBooks.value;
-      focusedBookIndex = -1;
+      state.searchTerm = dom.searchBooks.value;
+      state.focusedBookIndex = -1;
       renderBookList();
     });
     dom.clearBookSearch.addEventListener('click', () => {
-      searchTerm = '';
+      state.searchTerm = '';
       dom.searchBooks.value = '';
-      focusedBookIndex = -1;
+      state.focusedBookIndex = -1;
       renderBookList();
     });
 
     // Ricerca nelle evidenziazioni
     dom.searchHighlights.addEventListener('input', () => {
-      highlightSearch = dom.searchHighlights.value;
+      state.highlightSearch = dom.searchHighlights.value;
       renderHighlights();
     });
     dom.clearHighlightSearch.addEventListener('click', () => {
-      highlightSearch = '';
+      state.highlightSearch = '';
       dom.searchHighlights.value = '';
       renderHighlights();
     });
@@ -1262,7 +1265,7 @@
     cacheDom();
 
     // Inizializzazione tema in base alle preferenze di sistema
-    isDark = getSystemPreference();
+    state.isDark = getSystemPreference();
     applyTheme();
 
     // Costruzione contenuto modale scorciatoie
@@ -1274,7 +1277,7 @@
 
     // Caricamento SQL.js
     try {
-      SQL = await initSqlJs();
+      state.SQL = await initSqlJs();
       dom.sqlLoading.style.display = 'none';
 
       // Verifica database salvato in sessioni precedenti
@@ -1296,3 +1299,26 @@
     init();
   }
 })();
+
+// =============================================================================
+// CHANGELOG
+// =============================================================================
+//
+// v1.1.0 - Task 4.1: Stato centralizzato
+//
+//   - Rimosso: 10 variabili let individuali di stato (SQL, dbData, books,
+//     filteredBooks, selectedBook, highlightsRaw, searchTerm, highlightSearch,
+//     focusedBookIndex, isDark, showShortcutsHelp).
+//
+//   - Aggiunto: costante INITIAL_STATE con i valori di default di tutte le
+//     proprieta' di stato; oggetto let state inizializzato via shallow copy di
+//     INITIAL_STATE; funzione resetState() che ripristina state a INITIAL_STATE.
+//
+//   - Modificato: ogni lettura e scrittura delle variabili di stato ora avviene
+//     tramite state.<proprieta'> in tutte le funzioni del file.
+//
+//   - Modificato: resetApp() ora chiama resetState() preservando state.isDark e
+//     state.SQL, che non devono essere azzerati dal reset del database.
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento visibile per l'utente finale.
