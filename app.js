@@ -6,7 +6,7 @@
  * da tastiera, il tema dark/light e l'esportazione in vari formati.
  *
  * @file app.js
- * @version 1.7.0
+ * @version 1.8.0
  * @license MIT
  */
 
@@ -758,14 +758,15 @@
   /**
    * Escapa i caratteri HTML speciali per prevenire XSS
    * quando si inserisce contenuto tramite innerHTML.
+   * Usa una mappa di sostituzione e una regex con flag globale:
+   * nessun nodo DOM viene creato, la sostituzione avviene interamente in memoria.
    *
    * @param {string} str - Stringa da escapare
    * @returns {string} Stringa con entita' HTML escapate
    */
   function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return str.replace(/[&<>"']/g, (c) => map[c]);
   }
 
   // =========================================================================
@@ -1500,3 +1501,20 @@
 //   - Nessuna modifica a index.html o style.css.
 //   - Nessuna variazione di comportamento per l'utente finale sul caso nominale;
 //     ritardo massimo percepibile di 200 ms tra digitazione e aggiornamento lista.
+//
+// v1.8.0 - Task 1.4: Ottimizzazione escapeHtml con regex
+//
+//   - Modificato: corpo di escapeHtml() riscritto. Rimossa la creazione del nodo
+//     DOM temporaneo (createElement + createTextNode + innerHTML). Sostituito con
+//     una mappa letterale dei cinque caratteri speciali HTML e una singola chiamata
+//     str.replace(/[&<>"']/g, (c) => map[c]). Nessuna operazione DOM eseguita.
+//
+//   - Ampliato: la nuova implementazione esegue l'escape esplicito anche di " e '
+//     (rispettivamente &quot; e &#39;), non coperti sistematicamente dal precedente
+//     meccanismo basato su TextNode. Il comportamento per &, < e > resta identico.
+//
+//   - Modificato: JSDoc di escapeHtml() aggiornato per documentare l'approccio
+//     a mappa e l'assenza di operazioni DOM.
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento visibile per l'utente finale.
