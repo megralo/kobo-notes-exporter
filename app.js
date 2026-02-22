@@ -6,7 +6,7 @@
  * da tastiera, il tema dark/light e l'esportazione in vari formati.
  *
  * @file app.js
- * @version 1.6.0
+ * @version 1.7.0
  * @license MIT
  */
 
@@ -1193,10 +1193,29 @@
   // =========================================================================
 
   /**
+   * Ritarda l'esecuzione di fn finche' non trascorre wait ms senza nuove chiamate.
+   * Usata per limitare la frequenza di render durante la digitazione nelle
+   * caselle di ricerca.
+   *
+   * @param {Function} fn   - Funzione da ritardare.
+   * @param {number}   wait - Millisecondi di attesa (default 200).
+   * @returns {Function} Versione con debounce di fn.
+   */
+  function debounce(fn, wait = 200) {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), wait);
+    };
+  }
+
+  /**
    * Collega tutti gli event listener agli elementi del DOM.
    * Gestisce: tema, reset, modale, drag&drop, ricerca, ripristino ed esportazione.
    * Il click sulla lista libri e' gestito tramite un singolo listener delegato
    * su dom.bookList, che usa closest() per risalire all'elemento cliccato.
+   * I listener 'input' sulle caselle di ricerca sono avvolti in debounce()
+   * per ridurre i re-render durante la digitazione rapida.
    */
   function bindEvents() {
     // Tema
@@ -1265,12 +1284,12 @@
       if (book) selectBook(book.ContentID, book.BookTitle);
     });
 
-    // Ricerca nella lista libri
-    dom.searchBooks.addEventListener('input', () => {
+    // Ricerca nella lista libri (debounced)
+    dom.searchBooks.addEventListener('input', debounce(() => {
       state.searchTerm = dom.searchBooks.value;
       state.focusedBookIndex = -1;
       renderBookList();
-    });
+    }));
     dom.clearBookSearch.addEventListener('click', () => {
       state.searchTerm = '';
       dom.searchBooks.value = '';
@@ -1278,11 +1297,11 @@
       renderBookList();
     });
 
-    // Ricerca nelle evidenziazioni
-    dom.searchHighlights.addEventListener('input', () => {
+    // Ricerca nelle evidenziazioni (debounced)
+    dom.searchHighlights.addEventListener('input', debounce(() => {
       state.highlightSearch = dom.searchHighlights.value;
       renderHighlights();
-    });
+    }));
     dom.clearHighlightSearch.addEventListener('click', () => {
       state.highlightSearch = '';
       dom.searchHighlights.value = '';
@@ -1457,3 +1476,27 @@
 //
 //   - Nessuna modifica a index.html o style.css.
 //   - Nessuna variazione di comportamento visibile per l'utente finale.
+//
+// v1.7.0 - Task 1.3: Debounce sugli input di ricerca
+//
+//   - Aggiunto: funzione debounce(fn, wait = 200) nella sezione BINDING EVENTI,
+//     immediatamente prima di bindEvents(). Implementazione tramite closure su
+//     timer; usa fn.apply(this, args) per preservare contesto e parametri.
+//
+//   - Modificato: listener 'input' di dom.searchBooks avvolto in debounce():
+//     il callback che aggiorna state.searchTerm e chiama renderBookList() viene
+//     ora eseguito solo dopo 200 ms di inattivita' dalla digitazione.
+//
+//   - Modificato: listener 'input' di dom.searchHighlights avvolto in debounce():
+//     il callback che aggiorna state.highlightSearch e chiama renderHighlights()
+//     viene ora eseguito solo dopo 200 ms di inattivita' dalla digitazione.
+//
+//   - I listener 'click' di dom.clearBookSearch e dom.clearHighlightSearch
+//     rimangono invariati: sono click singoli e non traggono beneficio dal debounce.
+//
+//   - Modificato: JSDoc di bindEvents() aggiornato per documentare il debounce
+//     sui listener 'input'.
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento per l'utente finale sul caso nominale;
+//     ritardo massimo percepibile di 200 ms tra digitazione e aggiornamento lista.
