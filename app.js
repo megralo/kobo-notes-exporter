@@ -6,7 +6,7 @@
  * da tastiera, il tema dark/light e l'esportazione in vari formati.
  *
  * @file app.js
- * @version 1.4.0
+ * @version 1.5.0
  * @license MIT
  */
 
@@ -620,6 +620,8 @@
   /**
    * Renderizza la lista dei libri filtrata nel DOM.
    * Aggiorna anche il contatore, lo stato di selezione/focus e i controlli di ricerca.
+   * Il click sui singoli elementi e' gestito tramite event delegation su dom.bookList
+   * (registrata una volta sola in bindEvents).
    */
   function renderBookList() {
     const lower = state.searchTerm.toLowerCase();
@@ -663,7 +665,6 @@
           li.appendChild(authorDiv);
         }
 
-        li.addEventListener('click', () => selectBook(book.ContentID, book.BookTitle));
         dom.bookList.appendChild(li);
       });
     }
@@ -1190,6 +1191,8 @@
   /**
    * Collega tutti gli event listener agli elementi del DOM.
    * Gestisce: tema, reset, modale, drag&drop, ricerca, ripristino ed esportazione.
+   * Il click sulla lista libri e' gestito tramite un singolo listener delegato
+   * su dom.bookList, che usa closest() per risalire all'elemento cliccato.
    */
   function bindEvents() {
     // Tema
@@ -1245,6 +1248,17 @@
     dom.btnCancelRestore.addEventListener('click', async () => {
       await clearIDB();
       dom.restoreBanner.style.display = 'none';
+    });
+
+    // Event delegation per il click sulla lista libri.
+    // Un singolo listener su dom.bookList sostituisce i listener individuali
+    // su ogni <li>, eliminando allocazioni/distruzioni ad ogni re-render.
+    dom.bookList.addEventListener('click', (e) => {
+      const li = e.target.closest('[data-book-index]');
+      if (!li) return;
+      const idx = parseInt(li.dataset.bookIndex, 10);
+      const book = state.filteredBooks[idx];
+      if (book) selectBook(book.ContentID, book.BookTitle);
     });
 
     // Ricerca nella lista libri
@@ -1403,3 +1417,21 @@
 //   - Nessuna modifica a index.html o style.css.
 //   - Nessuna variazione di comportamento per termini di ricerca senza
 //     caratteri speciali HTML (caso nominale).
+//
+// v1.5.0 - Task 1.1: Event delegation sulla lista libri
+//
+//   - Rimosso: listener click individuale su ogni <li> in renderBookList()
+//     (`li.addEventListener('click', () => selectBook(...))`). Eliminata la
+//     creazione e distruzione di N closure ad ogni re-render della lista.
+//
+//   - Aggiunto: listener delegato su dom.bookList in bindEvents(). Usa
+//     `e.target.closest('[data-book-index]')` per risalire all'elemento
+//     cliccato e `parseInt(li.dataset.bookIndex, 10)` per ricavare l'indice
+//     in state.filteredBooks. Guard esplicito `if (!li) return` per click
+//     su aree prive di indice (es. elemento .empty-list).
+//
+//   - Modificato: JSDoc di renderBookList() e bindEvents() aggiornati per
+//     documentare la delega degli eventi.
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento visibile per l'utente finale.
