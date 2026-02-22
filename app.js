@@ -6,7 +6,7 @@
  * da tastiera, il tema dark/light e l'esportazione in vari formati.
  *
  * @file app.js
- * @version 1.5.0
+ * @version 1.6.0
  * @license MIT
  */
 
@@ -622,6 +622,8 @@
    * Aggiorna anche il contatore, lo stato di selezione/focus e i controlli di ricerca.
    * Il click sui singoli elementi e' gestito tramite event delegation su dom.bookList
    * (registrata una volta sola in bindEvents).
+   * Gli elementi <li> vengono costruiti su un DocumentFragment e inseriti nel DOM
+   * con un unico appendChild, riducendo i reflow del browser a uno solo per render.
    */
   function renderBookList() {
     const lower = state.searchTerm.toLowerCase();
@@ -641,6 +643,7 @@
         : 'Nessun risultato per la ricerca.';
       dom.bookList.appendChild(li);
     } else {
+      const fragment = document.createDocumentFragment();
       state.filteredBooks.forEach((book, i) => {
         const li = document.createElement('li');
         li.className = 'book-item';
@@ -665,8 +668,9 @@
           li.appendChild(authorDiv);
         }
 
-        dom.bookList.appendChild(li);
+        fragment.appendChild(li);
       });
+      dom.bookList.appendChild(fragment);
     }
 
     dom.bookCount.textContent = state.filteredBooks.length + ' libri';
@@ -1432,6 +1436,24 @@
 //
 //   - Modificato: JSDoc di renderBookList() e bindEvents() aggiornati per
 //     documentare la delega degli eventi.
+//
+//   - Nessuna modifica a index.html o style.css.
+//   - Nessuna variazione di comportamento visibile per l'utente finale.
+//
+// v1.6.0 - Task 1.2: Inserimento DOM con DocumentFragment
+//
+//   - Modificato: in renderBookList(), nel ramo else (lista con risultati),
+//     aggiunto `const fragment = document.createDocumentFragment()` prima del
+//     forEach; sostituito `dom.bookList.appendChild(li)` con
+//     `fragment.appendChild(li)` all'interno del loop; aggiunto
+//     `dom.bookList.appendChild(fragment)` dopo il forEach come unico accesso
+//     al DOM live. Riduce i reflow del browser da N (uno per <li>) a 1.
+//
+//   - Il ramo if (lista vuota, singolo <li> .empty-list) rimane invariato:
+//     il fragment non apporta vantaggi per un inserimento singolo.
+//
+//   - Modificato: JSDoc di renderBookList() aggiornato per documentare
+//     l'uso del DocumentFragment.
 //
 //   - Nessuna modifica a index.html o style.css.
 //   - Nessuna variazione di comportamento visibile per l'utente finale.
